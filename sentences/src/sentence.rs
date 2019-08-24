@@ -1,7 +1,8 @@
+use regex::Regex;
 use std::collections::BTreeSet;
 
 pub fn split_sentences<'a>(text: &'a str, delimiters: Vec<&str>, exceptions: Vec<&str>) -> Vec<&'a str> {
-    let mut breakpoints : BTreeSet<usize> = BTreeSet::new();
+    let mut breakpoints = BTreeSet::new();
     for p in delimiters {
         let p_len = p.chars().count();
         for m in text.match_indices(p) {
@@ -25,14 +26,29 @@ pub fn split_sentences<'a>(text: &'a str, delimiters: Vec<&str>, exceptions: Vec
         }
     }
 
+    let r_exceptions = vec![r#"\d\.\d"#, r#"\s\.\d"#];
+
+    for p in r_exceptions {
+        let re = Regex::new(p).unwrap(); //todo: get rid of unwraps
+        println!("regex: {}", p);
+        for m in re.find_iter(text) {
+            println!("{}: {}..{}", m.as_str(), m.start(), m.end());
+        }
+    }
+
+
+
+
     for i in breakpoints.iter() {
         print!("{}, ", i)
     }
     println!("---");
 
-    for i in 1..text.chars().len() {
-        if breakpoints.contains(i) && breakpoints.contains(i-1) {
-
+    for i in 1..text.chars().count() {
+        let current = i as usize;
+        let previous = i - 1 as usize;
+        if breakpoints.contains(&current) && breakpoints.contains(&previous) {
+            //todo: unimplemented
         }
     }
 
