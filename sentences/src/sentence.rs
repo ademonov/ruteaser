@@ -6,22 +6,23 @@ pub fn split_sentences<'a>(text: &'a str, words_delimiters: Vec<&str>, regex_del
     let mut breakpoints = BTreeSet::new(); // contains all the positions we are going to split out text by.
 
     dbg!(text);
-    handle_indices(text, words_delimiters, true, |x| { breakpoints.insert(x); });
+    process_words(text, words_delimiters, |start, end| breakpoints.add_indices(start, end));
     dbg!(&breakpoints);
-    handle_indices(text, regex_delimiters, false, |x| { breakpoints.insert(x); });
+    process_regex(text, regex_delimiters, |start, end| breakpoints.add_indices(start, end));
     dbg!(&breakpoints);
-    handle_indices(text, words_exceptions, true, |x| { breakpoints.remove(&x); });
+    process_words(text, words_exceptions, |start, end| breakpoints.remove_indices(start, end));
     dbg!(&breakpoints);
-    handle_indices(text, regex_exceptions, false, |x| { breakpoints.remove(&x); });
+    process_regex(text, regex_exceptions, |start, end| breakpoints.remove_indices(start, end));
     dbg!(&breakpoints);
 
-    for i in 1..text.chars().count() {
-        let current = i as usize;
-        let previous = i - 1 as usize;
-        if breakpoints.contains(&current) && breakpoints.contains(&previous) {
-            breakpoints.remove(&previous);
-        }
-    }
+    breakpoints.keep_last_in_consequence();
+//    for i in 1..text.chars().count() {
+//        let current = i as usize;
+//        let previous = i - 1 as usize;
+//        if breakpoints.contains(&current) && breakpoints.contains(&previous) {
+//            breakpoints.remove(&previous);
+//        }
+//    }
 
     let mut result = vec![];
     let mut cut = 0usize;
@@ -35,23 +36,58 @@ pub fn split_sentences<'a>(text: &'a str, words_delimiters: Vec<&str>, regex_del
     result
 }
 
-fn handle_indices(text: &str, patterns: Vec<&str>, insensitive: bool, mut handle_index: impl FnMut(usize))
-{
+fn process_words(text: &str, patterns: Vec<&str>, mut handle_indices: impl FnMut(usize, usize)) {
     for p in patterns {
-        let p = if insensitive {
-            String::from(p)
-        } else {
-            "(?i)".to_owned() + p
-        };
+        let p = p.to_lowercase();
+        for m in text.to_lowercase().match_indices(p.as_str()) { //todo: consider to convert text into lower case just once
+            handle_indices(m.0, m.0 + p.len());
+        }
+    }
+}
 
-        let re = Regex::new(p.as_str()).unwrap(); //todo: get rid of unwraps
+fn process_regex(text: &str, patterns: Vec<&str>, mut handle_indices: impl FnMut(usize, usize)) {
+    for p in patterns {
+        let re = Regex::new(p).unwrap(); //todo: get rid of unwraps
         for m in re.find_iter(text) {
-            for i in m.start()..m.end() {
-                handle_index(i);
+            handle_indices(m.start(), m.end());
+        }
+    }
+}
+
+trait Breakpoints {
+    fn add_indices(&mut self, start: usize, end: usize);
+    fn remove_indices(&mut self, start: usize, end: usize);
+    fn keep_last_in_consequence(&mut self);
+}
+
+
+impl Breakpoints for BTreeSet<usize> {
+    fn add_indices(&mut self, start: usize, end: usize) {
+        for i in start..end {
+            self.insert(i);
+        }
+    }
+
+    fn remove_indices(&mut self, start: usize, end: usize) {
+        for i in start..end {
+            self.remove(&i);
+        }
+    }
+
+    fn keep_last_in_consequence(&mut self) {
+        if self.len() < 2 { return; } // nothing to remove
+
+        let copy = self.cloned() .collect::<Vec<_>>();
+        for i in 1..copy.len() {
+            let previous = copy[i - 1];
+            let current = copy[i];
+            if current - previous == 1 {
+                &self.remove(&prev);
             }
         }
     }
 }
+
 
 #[cfg(test)]
 mod tests {
