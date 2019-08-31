@@ -16,24 +16,21 @@ pub fn split_sentences<'a>(text: &'a str, words_delimiters: Vec<&str>, regex_del
     dbg!(&breakpoints);
 
     breakpoints.keep_last_in_consequence();
-//    for i in 1..text.chars().count() {
-//        let current = i as usize;
-//        let previous = i - 1 as usize;
-//        if breakpoints.contains(&current) && breakpoints.contains(&previous) {
-//            breakpoints.remove(&previous);
-//        }
-//    }
 
     let mut result = vec![];
     let mut cut = 0usize;
     for i in breakpoints {
         let next_cut = i + 1; // cut sentences by character right after the current delimiter
-        result.push(&text[cut..next_cut]);
+        trim_push(&mut result, &text[cut..next_cut]);
         cut = next_cut;
     }
-    result.push(&text[cut..]); // add the latest sentence
+    trim_push(&mut result, &text[cut..]); // add the latest sentence
 
     result
+}
+
+fn trim_push<'a>(r: &mut Vec<&'a str>, s :&'a str) {
+    r.push(s.trim())
 }
 
 fn process_words(text: &str, patterns: Vec<&str>, mut handle_indices: impl FnMut(usize, usize)) {
