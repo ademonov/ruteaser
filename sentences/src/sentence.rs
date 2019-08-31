@@ -77,12 +77,12 @@ impl Breakpoints for BTreeSet<usize> {
     fn keep_last_in_consequence(&mut self) {
         if self.len() < 2 { return; } // nothing to remove
 
-        let copy = self.cloned() .collect::<Vec<_>>();
-        for i in 1..copy.len() {
+        let copy = self.iter().cloned().collect::<Vec<_>>();
+        for i in 1..self.len() {
             let previous = copy[i - 1];
             let current = copy[i];
             if current - previous == 1 {
-                &self.remove(&prev);
+                &self.remove(&previous);
             }
         }
     }
